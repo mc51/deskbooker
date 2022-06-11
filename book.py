@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 from prettytable import PrettyTable
 
 from deskbooker.deskbird_client import DeskbirdClient
+from deskbooker.config import Config
+
 
 logging.basicConfig()
 log = logging.getLogger()
@@ -28,7 +30,7 @@ arg_parser = argparse.ArgumentParser()
 arg_parser.add_argument(
     "function_name",
     type=str,
-    choices=["book", "checkin", "bookings"],
+    choices=["book", "checkin", "bookings", "set_status"],
     help="Function name",
 )
 arg_parser.add_argument("-f", "--from", dest="from_date", help="From date YYYY.MM.DD")
@@ -41,6 +43,12 @@ arg_parser.add_argument(
 )
 arg_parser.add_argument(
     "-z", "--zone", dest="zone", help='Set zone, e.g. "Marketing Advertising"'
+)
+arg_parser.add_argument(
+    "-s",
+    "--status",
+    dest="status",
+    help='Set status, if not specified using default: "Mobile office"',
 )
 
 
@@ -66,7 +74,7 @@ def main():
             print(bookings_table)
         elif args.function_name == "book":
             if args.from_date is None or args.to_date is None:
-                arg_parser.error("book requires --from and --to")
+                arg_parser.error("Specify --from and --to")
             try:
                 from_date = dateutil.parser.parse(args.from_date)
             except dateutil.parser._parser.ParserError:
@@ -75,6 +83,13 @@ def main():
                 to_date = dateutil.parser.parse(args.to_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.to_date} is not a valid date format")
+            if (
+                diff := (to_date.date() - datetime.now().date()).days
+            ) > Config.MAX_DESK_BOOKING_DAYS:
+                arg_parser.error(
+                    f"You can only book {Config.MAX_DESK_BOOKING_DAYS} days in advance. "
+                    f"Your end date is in {diff} days!"
+                )
             if args.desk_number is None:
                 print("Specify --desk")
                 return
@@ -111,6 +126,53 @@ def main():
                                     str(response.status_code),
                                     response.reason,
                                     "Desk is booked!",
+                                ]
+                            )
+                        )
+                current_date = current_date + timedelta(days=1)
+        elif args.function_name == "set_status":
+            if args.from_date is None or args.to_date is None:
+                arg_parser.error("Specify --from and --to")
+            if args.status is None:
+                print("Status not specified, using default")
+            try:
+                from_date = dateutil.parser.parse(args.from_date)
+            except dateutil.parser._parser.ParserError:
+                arg_parser.error(f"{args.from_date} is not a valid date format")
+            try:
+                to_date = dateutil.parser.parse(args.to_date)
+            except dateutil.parser._parser.ParserError:
+                arg_parser.error(f"{args.to_date} is not a valid date format")
+            if (
+                diff := (to_date.date() - datetime.now().date()).days
+            ) > Config.MAX_STATUS_BOOKING_DAYS:
+                arg_parser.error(
+                    f"You can only set status for {Config.MAX_STATUS_BOOKING_DAYS} days in advance. "
+                    f"Your end date is in {diff} days!"
+                )
+            current_date = from_date
+            while current_date <= to_date:
+                if current_date.weekday() < 5:
+                    response = db_client.set_status(current_date)
+                    if response.status_code != 201:
+                        print(
+                            " | ".join(
+                                [
+                                    str(current_date.date()),
+                                    str(response.status_code),
+                                    response.reason,
+                                    json.loads(response.text)["message"],
+                                ]
+                            )
+                        )
+                    else:
+                        print(
+                            " | ".join(
+                                [
+                                    str(current_date.date()),
+                                    str(response.status_code),
+                                    response.reason,
+                                    "Status is set!",
                                 ]
                             )
                         )

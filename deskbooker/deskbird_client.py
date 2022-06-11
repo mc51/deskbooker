@@ -34,6 +34,33 @@ class DeskbirdClient:
         self.zone_item_id = zone_item_id
         self.access_token = get_access_token(self.token_key, self.refresh_token)
 
+    def set_status(
+        self, date: datetime, status: str = "Mobile office"
+    ) -> requests.Response:
+        """Set office status for given date"""
+
+        url = "https://app.deskbird.com/api/v1.1/officePlanning"
+        start_time = end_time = date
+        start_time = start_time.replace(hour=9)
+        end_time = end_time.replace(hour=17)
+
+        body = {
+            "day": str(start_time.date()),
+            "startTime": int(start_time.timestamp() * 1000),
+            "endTime": int(end_time.timestamp() * 1000),
+            "status": status,
+            "bookingIds": [],
+            "officeId": "cktu67xoy002s01s6eu2w428t",
+            "optionId": "ckz2ht36w000sa1zr46a7ed92",
+        }
+
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+            "Content-Type": "application/json",
+        }
+        log.debug(f"Body: {body}")
+        return requests.post(url, headers=headers, data=json.dumps(body))
+
     def set_zone_item_id(self, zone_name, desk_id):
         url = (
             f"https://app.deskbird.com/api/v1.1/internalWorkspaces/"

@@ -1,0 +1,3 @@
+class Config:
+    MAX_DESK_BOOKING_DAYS = 12
+    MAX_STATUS_BOOKING_DAYS = 100
