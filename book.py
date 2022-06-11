@@ -15,7 +15,7 @@ from deskbooker.config import Config
 
 logging.basicConfig()
 log = logging.getLogger()
-log.setLevel(logging.INFO)
+log.setLevel(logging.DEBUG)
 load_dotenv(verbose=True)
 
 db_client = DeskbirdClient(
@@ -153,14 +153,20 @@ def main():
         elif args.function_name == "set_status":
             if args.from_date is None or args.to_date is None:
                 arg_parser.error("Specify --from and --to")
-            if args.status is None:
-                print("Status not specified, using default")
             try:
-                from_date = dateutil.parser.parse(args.from_date)
+                if args.from_date == "max":
+                    from_date = datetime.now()
+                else:
+                    from_date = dateutil.parser.parse(args.from_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.from_date} is not a valid date format")
             try:
-                to_date = dateutil.parser.parse(args.to_date)
+                if args.to_date == "max":
+                    to_date = datetime.now() + timedelta(
+                        days=Config.DEFAULT_STATUS_BOOKING_DAYS
+                    )
+                else:
+                    to_date = dateutil.parser.parse(args.to_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.to_date} is not a valid date format")
             if (
