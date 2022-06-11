@@ -2,17 +2,19 @@
 import argparse
 import json
 import os
-import sys
+import logging
 from datetime import datetime, timedelta
 
 import dateutil.parser
 from dotenv import load_dotenv
 from prettytable import PrettyTable
 
-from .deskbird_client import DeskbirdClient
+from deskbooker.deskbird_client import DeskbirdClient
 
-load_dotenv()
-
+logging.basicConfig()
+log = logging.getLogger()
+log.setLevel(logging.INFO)
+load_dotenv(verbose=True)
 
 db_client = DeskbirdClient(
     refresh_token=os.environ["REFRESH_TOKEN"],
@@ -29,10 +31,17 @@ arg_parser.add_argument(
     choices=["book", "checkin", "bookings"],
     help="Function name",
 )
-arg_parser.add_argument("-f", "--from", dest="from_date", help="From date")
-arg_parser.add_argument("-t", "--to", dest="to_date", help="To date")
-arg_parser.add_argument("-d", "--desk", dest="desk_number", help="Desk number")
-arg_parser.add_argument("-z", "--zone", dest="zone", help="Set zone")
+arg_parser.add_argument("-f", "--from", dest="from_date", help="From date YYYY.MM.DD")
+arg_parser.add_argument("-t", "--to", dest="to_date", help="To date YYYY.MM.DD")
+arg_parser.add_argument(
+    "-d",
+    "--desk",
+    dest="desk_number",
+    help='Desk number, e.g for "Desk 3.99 use "3.99"',
+)
+arg_parser.add_argument(
+    "-z", "--zone", dest="zone", help='Set zone, e.g. "Marketing Advertising"'
+)
 
 
 def main():
@@ -66,8 +75,11 @@ def main():
                 to_date = dateutil.parser.parse(args.to_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.to_date} is not a valid date format")
-            if (args.zone is None) != (args.desk_number is None):
-                print("Both zone and desk_number is not present.")
+            if args.desk_number is None:
+                print("Specify --desk")
+                return
+            if args.zone is None:
+                print("Specify --zone")
                 return
             if args.zone is not None and args.desk_number is not None:
                 try:
@@ -109,4 +121,4 @@ def main():
 
 
 if __name__ == "__main__":
-    globals()[sys.argv[1]]()
+    main()

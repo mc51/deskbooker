@@ -1,9 +1,14 @@
 import json
+import logging
 from datetime import datetime
 
 import requests
 
 from .auth import get_access_token
+
+logging.basicConfig()
+log = logging.getLogger("client")
+log.setLevel(logging.DEBUG)
 
 
 class DeskbirdClient:
@@ -38,6 +43,7 @@ class DeskbirdClient:
             "Authorization": f"Bearer {self.access_token}",
         }
         response = json.loads(requests.get(url=url, headers=headers).text)
+        log.debug(response.get("results"))
         for zone in response["results"]:
             if zone_name == zone["name"]:
                 for desk in zone["availability"]["zoneItems"]:
