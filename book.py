@@ -33,8 +33,12 @@ arg_parser.add_argument(
     choices=["book", "checkin", "bookings", "set_status"],
     help="Function name",
 )
-arg_parser.add_argument("-f", "--from", dest="from_date", help="From date YYYY.MM.DD")
-arg_parser.add_argument("-t", "--to", dest="to_date", help="To date YYYY.MM.DD")
+arg_parser.add_argument(
+    "-f", "--from", dest="from_date", help="From date YYYY.MM.DD (or max)"
+)
+arg_parser.add_argument(
+    "-t", "--to", dest="to_date", help="To date YYYY.MM.DD (or max)"
+)
 arg_parser.add_argument(
     "-d",
     "--desk",
@@ -76,11 +80,21 @@ def main():
             if args.from_date is None or args.to_date is None:
                 arg_parser.error("Specify --from and --to")
             try:
-                from_date = dateutil.parser.parse(args.from_date)
+                if args.from_date == "max":
+                    from_date = datetime.now() + timedelta(
+                        days=Config.MAX_DESK_BOOKING_DAYS
+                    )
+                else:
+                    from_date = dateutil.parser.parse(args.from_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.from_date} is not a valid date format")
             try:
-                to_date = dateutil.parser.parse(args.to_date)
+                if args.to_date == "max":
+                    to_date = datetime.now() + timedelta(
+                        days=Config.MAX_DESK_BOOKING_DAYS
+                    )
+                else:
+                    to_date = dateutil.parser.parse(args.to_date)
             except dateutil.parser._parser.ParserError:
                 arg_parser.error(f"{args.to_date} is not a valid date format")
             if (
@@ -90,10 +104,10 @@ def main():
                     f"You can only book {Config.MAX_DESK_BOOKING_DAYS} days in advance. "
                     f"Your end date is in {diff} days!"
                 )
-            if args.desk_number is None:
+            if args.desk_number is None and not os.environ.get("ZONE_ITEM_ID"):
                 print("Specify --desk")
                 return
-            if args.zone is None:
+            if args.zone is None and not os.environ.get("ZONE_ITEM_ID"):
                 print("Specify --zone")
                 return
             if args.zone is not None and args.desk_number is not None:
@@ -106,6 +120,12 @@ def main():
             current_date = from_date
             while current_date <= to_date:
                 if current_date.weekday() < 5:
+                    if current_date.weekday() not in Config.WEEKDAY_TO_BOOK:
+                        print(
+                            f"Skipping {str(current_date.date())} because it is not in WEEKDAY_TO_BOOK."
+                        )
+                        current_date = current_date + timedelta(days=1)
+                        continue
                     response = db_client.book_desk(current_date)
                     if response.status_code != 201:
                         print(

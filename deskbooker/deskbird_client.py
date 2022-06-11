@@ -41,8 +41,8 @@ class DeskbirdClient:
 
         url = "https://app.deskbird.com/api/v1.1/officePlanning"
         start_time = end_time = date
-        start_time = start_time.replace(hour=9)
-        end_time = end_time.replace(hour=17)
+        start_time = start_time.replace(hour=8)
+        end_time = end_time.replace(hour=18)
 
         body = {
             "day": str(start_time.date()),
@@ -98,8 +98,8 @@ class DeskbirdClient:
         }
 
         start_time = end_time = date
-        start_time = start_time.replace(hour=9)
-        end_time = end_time.replace(hour=17)
+        start_time = start_time.replace(hour=8)
+        end_time = end_time.replace(hour=18)
         body["bookingStartTime"] = int(start_time.timestamp() * 1000)
         body["bookingEndTime"] = int(end_time.timestamp() * 1000)
 
